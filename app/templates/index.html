@@ -1,0 +1,33 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Seguridad de Azure</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Reporte de Seguridad de Azure</h1>
+        <table class="table table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>Nombre de VM</th>
+                    <th>Estado del Cifrado de Disco</th>
+                    <th>Estado del NSG</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vm in report %}
+                <tr>
+                    <td>{{ vm.vm_name }}</td>
+                    <td>{{ vm.encryption_status }}</td>
+                    <td>{{ vm.nsg_status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

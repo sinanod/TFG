@@ -1,0 +1,83 @@
+/* styles.css */
+
+/* General Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f3f6f9; /* Color de fondo similar al portal de Azure */
+    color: #323130; /* Texto en un color gris oscuro */
+    margin: 0;
+    padding: 0;
+}
+
+/* Container */
+.container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Title */
+h1 {
+    color: #0078d4; /* Color azul del portal de Azure */
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Table Styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+th {
+    background-color: #0078d4; /* Color azul de la cabecera */
+    color: #ffffff; /* Texto blanco */
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+td {
+    color: #323130;
+}
+
+/* Row Hover Effect */
+tr:hover {
+    background-color: #f3f2f1; /* Sutil cambio de color al pasar el mouse */
+}
+
+/* Button Styles (Opcional si se añade un botón en el futuro) */
+.button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #0078d4;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.button:hover {
+    background-color: #005a9e;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .container {
+        padding: 10px;
+    }
+
+    th, td {
+        padding: 8px;
+    }
+}
