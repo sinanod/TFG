@@ -6,30 +6,11 @@ h1, h2 {
     color: #343a40;
 }
 
-.table {
-    background-color: #ffffff;
-    border-radius: 0.5rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-}
-
 .table th, .table td {
-    vertical-align: middle;
+    vertical-align: middle !important;
 }
 
-.text-center {
-    margin-bottom: 1.5rem;
-}
-
-.btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
-}
-
-ul {
-    padding-left: 20px;
+.btn {
+    font-size: 1.1rem;
+    padding: 10px 20px;
 }

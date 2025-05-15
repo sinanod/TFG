@@ -1,7 +1,7 @@
 provider "azurerm" {
   features {}
   resource_provider_registrations = "none"
-  subscription_id = "274306c3-36fc-496d-9fe5-49ebd1a575dd"
+  subscription_id = "bb56258c-de75-4fb6-9cd4-f22d830537c5"
 }
 
 # Grupo de recursos
@@ -75,12 +75,12 @@ resource "azurerm_storage_account" "bootdiag" {
 
 # Máquina virtual Windows Server 2022 Datacenter
 resource "azurerm_windows_virtual_machine" "vm" {
-  name                  = "sec-eval-vm"  # Asegúrate de que el nombre de la VM tiene menos de 15 caracteres
-  computer_name         = "sec-eval"     # Nombre de computadora explícito
+  name                  = "sec-eval-vm"  
+  computer_name         = "sec-eval"     
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
   network_interface_ids = [azurerm_network_interface.nic.id]
-  size                  = "Standard_B2s"  # Tamaño de la VM ajustado a la suscripción de estudiante
+  size                  = "Standard_B2s"  
   admin_username        = var.admin_username
   admin_password        = var.admin_password
 

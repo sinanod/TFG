@@ -6,142 +6,147 @@ from fpdf import FPDF
 from security_evaluator import generate_security_report
 
 app = Flask(__name__)
-
-# Crear la aplicación Dash y asociarla con la instancia de Flask
 dash_app = Dash(__name__, server=app, url_base_pathname='/dashboard/')
 
-# Generar los datos del reporte y preparar los gráficos
+# --------------------------
+# Cargar datos de auditoría
+# --------------------------
 report_data = generate_security_report()
+resources = report_data['resources']
+checks = report_data['checks']
 
-# Si hay datos, se convierten en un DataFrame para facilitar la visualización
-vms = report_data['vms']
-if not vms:
-    df_vms = pd.DataFrame()  # Si no hay VMs, crear un DataFrame vacío
-else:
-    data = {
+# --------------------------
+# Dashboard Interactivo
+# --------------------------
+# Preparar DataFrame de VMs
+vms = resources['vms']
+if vms:
+    df_vms = pd.DataFrame({
         'Nombre_VM': [vm['name'] for vm in vms],
-        'Cifrado_Disco': ['Sí' if 'cumple' in enc[0].lower() else 'No' for vm in vms for enc in
-                          [vm['disk_encryption']]],
-        'Diagnóstico_Boot': ['Habilitado' if 'habilitados' in vm['boot_diagnostics'].lower() else 'Deshabilitado' for vm
-                             in vms],
-    }
-    df_vms = pd.DataFrame(data)
+        'Cifrado_Disco': [
+            'Sí' if 'Sin cifrado' not in vm['disk_encryption'][0] else 'No'
+            for vm in vms
+        ],
+        'Diagnóstico_Boot': [
+            'Habilitado' if 'Deshabilitados' not in vm['boot_diagnostics'] else 'Deshabilitado'
+            for vm in vms
+        ],
+    })
+else:
+    df_vms = pd.DataFrame(columns=['Nombre_VM', 'Cifrado_Disco', 'Diagnóstico_Boot'])
 
-# Crear gráficos usando Plotly Express
 fig_cifrado_discos = px.bar(
     df_vms,
     x='Nombre_VM',
     y='Cifrado_Disco',
-    title='Estado del Cifrado de Discos por Máquina Virtual',
-    color='Cifrado_Disco',
-    barmode='group'
+    title='Estado de Cifrado de Discos en VMs'
 )
 
 fig_diagnostics = px.pie(
     df_vms,
     names='Diagnóstico_Boot',
-    title='Estado de los Diagnósticos de Arranque de las Máquinas Virtuales'
+    title='Diagnósticos de Arranque (VMs)'
 )
 
-# Añadir gráficos y contenido a la app de Dash
+# Layout del Dashboard
 dash_app.layout = html.Div([
     html.H1("Dashboard de Seguridad de Azure", style={'textAlign': 'center'}),
-    dcc.Graph(
-        id='fig_cifrado_discos',
-        figure=fig_cifrado_discos
-    ),
-    dcc.Graph(
-        id='fig_diagnostics',
-        figure=fig_diagnostics
-    ),
+    html.H2("Máquinas Virtuales", style={'textAlign': 'left'}),
+    dcc.Graph(id='fig_cifrado_discos', figure=fig_cifrado_discos),
+    dcc.Graph(id='fig_diagnostics', figure=fig_diagnostics),
 ])
 
-
+# --------------------------
+# Rutas de Flask
+# --------------------------
 @app.route('/')
 def index():
-    report_data = generate_security_report()
-    report = report_data['vms']
-    roles_permissions = report_data['roles_and_permissions']
-    nsg_rules = []  # Implementa cómo obtener las reglas NSG
-    change_history = []  # Historial de cambios de Azure
-
-    return render_template('index.html', report=report, roles_permissions=roles_permissions,
-                           change_history=change_history)
-
+    return render_template('index.html', resources=resources, checks=checks)
 
 @app.route('/download_report')
 def download_report():
-    report_data = generate_security_report()
-
-    if report_data['status'] == 'error':
-        return "No se pudo generar el informe de seguridad.", 500
-
-    # Crear el PDF usando FPDF
-    pdf = FPDF()
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # Título principal
-    pdf.set_font("Arial", "B", 20)
-    pdf.set_text_color(0, 114, 188)  # Azul estilo Azure
-    pdf.cell(0, 10, "Reporte de Seguridad de Azure", ln=True, align='C')
-    pdf.ln(10)
-
-    # Subtítulo
-    pdf.set_font("Arial", "B", 16)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 10, "Detalles de las Máquinas Virtuales", ln=True, align='L')
-    pdf.ln(5)
-
-    # Información de cada VM
-    for vm in report_data['vms']:
-        # Nombre de la VM
-        pdf.set_font("Arial", "B", 14)
-        pdf.set_text_color(0, 0, 0)
-        pdf.cell(0, 10, f"Máquina Virtual: {vm['name']}", ln=True)
+    def add_title(text):
+        pdf.set_font('Arial', 'B', 18)
+        pdf.cell(0, 10, text, ln=True, align='C')
         pdf.ln(5)
 
-        # Información sobre el cifrado de discos
-        pdf.set_font("Arial", "", 12)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 10, "Estado del Cifrado de Disco:", ln=True)
-        pdf.set_font("Arial", "", 12)
-        pdf.set_text_color(0, 0, 0)
+    def add_section_title(text):
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 8, text, ln=True)
+        pdf.ln(3)
 
-        for status in vm['disk_encryption']:
-            pdf.cell(0, 10, f" - {status}", ln=True)
-
-        pdf.ln(5)
-
-        # Estado del Firewall
-        pdf.set_font("Arial", "", 12)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 10, "Estado del Firewall:", ln=True)
-        pdf.set_font("Arial", "", 12)
-        pdf.set_text_color(0, 0, 0)
-        pdf.cell(0, 10, f" - {vm['firewall']}", ln=True)
-        pdf.ln(5)
-
-        # Diagnósticos de Arranque
-        pdf.set_font("Arial", "", 12)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 10, "Diagnósticos de Arranque:", ln=True)
-        pdf.set_font("Arial", "", 12)
-        pdf.set_text_color(0, 0, 0)
-        pdf.cell(0, 10, f" - {vm['boot_diagnostics']}", ln=True)
-        pdf.ln(10)
-
-        # Línea separadora
-        pdf.set_draw_color(200, 200, 200)  # Gris claro
+    def add_separator():
+        pdf.set_draw_color(150, 150, 150)
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(10)
+        pdf.ln(5)
 
-    # Crear la respuesta para el navegador
+    def add_checks_table(checks_list):
+        pdf.set_font('Arial', 'B', 11)
+        headers = ['Regla', 'Recurso', 'Estado', 'Criticidad', 'Normas', 'Recomendación']
+        col_widths = [30, 50, 20, 25, 35, 30]
+        col_aligns = ['C', 'L', 'C', 'C', 'L', 'L']
+        line_height = 5
+
+        for i, header in enumerate(headers):
+            pdf.cell(col_widths[i], 8, header, border=1, align='C')
+        pdf.ln()
+        pdf.set_font('Arial', '', 9)
+
+        for check in checks_list:
+            row = [
+                check.get('name', ''),
+                check.get('resource', ''),
+                "APROBADO" if check.get('passed') else "FALLIDO",
+                check.get('criticality', 'Desconocida'),
+                ", ".join(check.get('compliance', [])),
+                check.get('recommendation', '')
+            ]
+
+            max_lines = 1
+            for i, text in enumerate(row):
+                width = col_widths[i]
+                words = str(text).split()
+                lines = 1
+                line_width = 0
+                for word in words:
+                    w = pdf.get_string_width(word + ' ')
+                    if line_width + w > width:
+                        lines += 1
+                        line_width = w
+                    else:
+                        line_width += w
+                max_lines = max(max_lines, lines)
+
+            row_height = max_lines * line_height
+            x_start = pdf.get_x()
+            y_start = pdf.get_y()
+
+            for i, value in enumerate(row):
+                pdf.set_xy(x_start + sum(col_widths[:i]), y_start)
+                if i == 2:
+                    pdf.set_fill_color(200, 255, 200) if check.get('passed') else pdf.set_fill_color(255, 200, 200)
+                    pdf.multi_cell(col_widths[i], line_height, value, border=1, align=col_aligns[i], fill=True)
+                    pdf.set_fill_color(255, 255, 255)
+                else:
+                    pdf.multi_cell(col_widths[i], line_height, str(value), border=1, align=col_aligns[i])
+
+            pdf.set_y(y_start + row_height)
+
+    add_title('Reporte de Seguridad de Azure')
+
+    for section in ['vms', 'sql', 'storage', 'iam']:
+        add_separator()
+        add_section_title(f"Checks de {section.upper()}")
+        add_checks_table(checks[section])
+
     response = make_response(pdf.output(dest='S').encode('latin1'))
     response.headers['Content-Type'] = 'application/pdf'
     response.headers['Content-Disposition'] = 'inline; filename=security_report.pdf'
     return response
-
 
 if __name__ == "__main__":
     app.run(debug=True)
