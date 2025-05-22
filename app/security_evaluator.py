@@ -3,6 +3,7 @@ from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.sql import SqlManagementClient
 from azure.mgmt.storage import StorageManagementClient
 from azure.mgmt.authorization import AuthorizationManagementClient
+import requests
 
 # ------------------------
 # Configuración inicial
@@ -73,46 +74,60 @@ def get_storage_accounts_data():
 
 def resolve_principal_name(principal_id):
     try:
-        token = get_graph_token()
+        token = credential.get_token("https://graph.microsoft.com/.default")
         headers = {
-            "Authorization": f"Bearer {token}"
+            "Authorization": f"Bearer {token.token}"
         }
-        url = f"{graph_endpoint}/directoryObjects/{principal_id}"
+        url = f"https://graph.microsoft.com/v1.0/directoryObjects/{principal_id}"
 
         res = requests.get(url, headers=headers)
+
         if res.status_code == 200:
             data = res.json()
-            if '@odata.type' in data:
-                if data['@odata.type'] == "#microsoft.graph.user":
-                    return data.get('displayName', principal_id)
-                elif data['@odata.type'] == "#microsoft.graph.group":
-                    return data.get('displayName', principal_id)
-                elif data['@odata.type'] == "#microsoft.graph.servicePrincipal":
-                    return data.get('appDisplayName', principal_id)
-        return principal_id
-    except Exception:
-        return principal_id
+            odata_type = data.get('@odata.type')
+
+            if odata_type == "#microsoft.graph.user":
+                return data.get('userPrincipalName') or data.get('displayName')
+            elif odata_type == "#microsoft.graph.servicePrincipal":
+                return data.get('appDisplayName')
+            elif odata_type == "#microsoft.graph.group":
+                return data.get('displayName')
+
+        print("Graph no respondió nombre:", res.status_code, res.text)
+        return f"Desconocido ({principal_id[:8]})"
+
+    except Exception as e:
+        print("Error en Graph:", e)
+        return f"Desconocido ({principal_id[:8]})"
 
 
 def get_iam_data():
-    roles = []
-    for assignment in authorization_client.role_assignments.list_for_scope(scope=f"/subscriptions/{subscription_id}"):
-        role_id = assignment.role_definition_id.split('/')[-1]
-        try:
-            role = authorization_client.role_definitions.get(
-                scope=f"/subscriptions/{subscription_id}",
-                role_definition_id=role_id
-            )
-            role_name = role.role_name
-        except:
-            role_name = role_id
+    roles_info = []
+    role_assignments = authorization_client.role_assignments.list_for_scope(
+        scope=f"/subscriptions/{subscription_id}"
+    )
 
-        principal_name = resolve_principal_name(assignment.principal_id)
-        roles.append({
+    for assignment in role_assignments:
+        role_def_id = assignment.role_definition_id.split('/')[-1]
+
+        try:
+            role_def = authorization_client.role_definitions.get(
+                scope=f"/subscriptions/{subscription_id}",
+                role_definition_id=role_def_id
+            )
+            role_name = role_def.role_name
+        except Exception:
+            role_name = role_def_id
+
+        principal_id = assignment.principal_id
+        principal_name = resolve_principal_name(principal_id)
+
+        roles_info.append({
             'principal_id': principal_name,
             'role': role_name
         })
-    return roles
+
+    return roles_info
 
 
 # ------------------------

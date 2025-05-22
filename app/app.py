@@ -48,13 +48,120 @@ fig_diagnostics = px.pie(
     title='Diagnósticos de Arranque (VMs)'
 )
 
+
 # Layout del Dashboard
-dash_app.layout = html.Div([
-    html.H1("Dashboard de Seguridad de Azure", style={'textAlign': 'center'}),
-    html.H2("Máquinas Virtuales", style={'textAlign': 'left'}),
-    dcc.Graph(id='fig_cifrado_discos', figure=fig_cifrado_discos),
-    dcc.Graph(id='fig_diagnostics', figure=fig_diagnostics),
-])
+# Crear gráficos dinámicos con los datos ya cargados
+def get_dashboard_layout():
+    layout_components = [
+        html.H1("Dashboard de Seguridad de Azure", style={'textAlign': 'center', 'marginBottom': '40px'}),
+    ]
+
+    # --------- RESUMEN GENERAL DE CHECKS ----------
+    all_checks = []
+    for check_list in checks.values():
+        all_checks.extend(check_list)
+
+    df_checks = pd.DataFrame(all_checks)
+    passed = df_checks['passed'].sum()
+    failed = len(df_checks) - passed
+    fig_resumen = px.pie(values=[passed, failed], names=['Aprobados', 'Fallidos'], title='Resumen de Checks')
+
+    layout_components.append(dcc.Graph(figure=fig_resumen))
+
+    # --------- VMs ----------
+    if resources['vms']:
+        df_vms = pd.DataFrame({
+            'VM': [vm['name'] for vm in resources['vms']],
+            'Cifrado': [
+                'Sí' if 'Sin cifrado' not in vm['disk_encryption'][0] else 'No'
+                for vm in resources['vms']
+            ],
+            'Diagnóstico': [
+                'Habilitado' if 'Deshabilitados' not in vm['boot_diagnostics'] else 'Deshabilitado'
+                for vm in resources['vms']
+            ]
+        })
+
+        fig_vm_cifrado = px.histogram(df_vms, x='VM', color='Cifrado', title='Cifrado de discos (VMs)')
+        fig_vm_diag = px.pie(df_vms, names='Diagnóstico', title='Diagnóstico de arranque (VMs)')
+
+        layout_components += [
+            html.H2("Máquinas Virtuales"),
+            dcc.Graph(figure=fig_vm_cifrado),
+            dcc.Graph(figure=fig_vm_diag)
+        ]
+
+    # --------- SQL ----------
+    sql_checks = checks.get('sql', [])
+    if sql_checks:
+        sql_summary = pd.DataFrame([
+            {'SQL': c['resource'], 'Check': c['name'], 'Estado': 'Fallido' if not c['passed'] else 'Aprobado'}
+            for c in sql_checks if 'sql' in c['name']
+        ])
+        if not sql_summary.empty:
+            fig_sql = px.histogram(sql_summary, x='SQL', color='Estado', title='Checks en SQL Servers')
+            layout_components += [
+                html.H2("SQL Servers"),
+                dcc.Graph(figure=fig_sql)
+            ]
+
+    # --------- STORAGE ----------
+    storage_data = resources.get('storage_accounts', [])
+    if storage_data:
+        df_storage = pd.DataFrame(storage_data)
+        if not df_storage.empty:
+            fig_storage_encrypt = px.pie(df_storage, names='encryption', title='Cifrado en Storage Accounts')
+            fig_storage_public = px.pie(
+                df_storage,
+                names=df_storage['public_access'].map({True: 'Público', False: 'Privado'}),
+                title='Acceso público en Storage Accounts'
+            )
+            layout_components += [
+                html.H2("Storage Accounts"),
+                dcc.Graph(figure=fig_storage_encrypt),
+                dcc.Graph(figure=fig_storage_public)
+            ]
+
+    # --------- IAM ----------
+    iam_data = resources.get('iam', [])
+    if iam_data:
+        df_iam = pd.DataFrame(iam_data)
+        if not df_iam.empty:
+            fig_iam_roles = px.histogram(df_iam, x='role', title='Distribución de Roles IAM')
+            layout_components += [
+                html.H2("IAM (Identidad y Acceso)"),
+                dcc.Graph(figure=fig_iam_roles)
+            ]
+
+    # --------- NSGs ----------
+    nsgs_checks = checks.get('nsgs', [])
+    if nsgs_checks:
+        fallidos = [c for c in nsgs_checks if not c['passed']]
+        if fallidos:
+            df_nsgs = pd.DataFrame([{'NSG': c['resource'], 'Puerto inseguro': c['description']} for c in fallidos])
+            layout_components += [
+                html.H2("NSGs inseguros"),
+                html.Div([
+                    dcc.Markdown("### Puertos abiertos al público detectados:"),
+                    dcc.Graph(figure=px.bar(df_nsgs, x='NSG', title='Puertos inseguros en NSGs'))
+                ])
+            ]
+
+    # --------- CRITICIDAD GLOBAL ----------
+    if 'criticality' in df_checks.columns:
+        fig_criticidad = px.histogram(df_checks, x='criticality', color='passed', barmode='group',
+                                      title='Resumen por Criticidad')
+        layout_components += [
+            html.H2("Resumen por Criticidad"),
+            dcc.Graph(figure=fig_criticidad)
+        ]
+
+    return html.Div(layout_components)
+
+
+# Asignar layout
+dash_app.layout = get_dashboard_layout()
+
 
 # --------------------------
 # Rutas de Flask
@@ -62,6 +169,7 @@ dash_app.layout = html.Div([
 @app.route('/')
 def index():
     return render_template('index.html', resources=resources, checks=checks)
+
 
 @app.route('/download_report')
 def download_report():
@@ -147,6 +255,7 @@ def download_report():
     response.headers['Content-Type'] = 'application/pdf'
     response.headers['Content-Disposition'] = 'inline; filename=security_report.pdf'
     return response
+
 
 if __name__ == "__main__":
     app.run(debug=True)
