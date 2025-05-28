@@ -1,4 +1,5 @@
 # Carpetas de Terraform
+.idea
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
