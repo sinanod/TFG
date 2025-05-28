@@ -104,3 +104,71 @@ resource "azurerm_windows_virtual_machine" "vm" {
 
   patch_mode = "AutomaticByPlatform"  # Establecer el modo de parcheo
 }
+
+
+resource "azurerm_network_interface" "nic_extra" {
+  count               = 4
+  name                = "security-eval-nic-${count.index + 1}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.subnet.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+resource "azurerm_windows_virtual_machine" "vm_extra" {
+  count                = 4
+  name                 = "sec-eval-vm-${count.index + 2}"
+  location             = azurerm_resource_group.rg.location
+  resource_group_name  = azurerm_resource_group.rg.name
+  network_interface_ids = [azurerm_network_interface.nic_extra[count.index].id]
+  size                 = "Standard_B2s"
+  admin_username       = var.admin_username
+  admin_password       = var.admin_password
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2022-datacenter-azure-edition-core"
+    version   = "latest"
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+    disk_size_gb         = 127
+  }
+
+  patch_mode = "AutomaticByPlatform"
+}
+resource "azurerm_storage_account" "extra_storage" {
+  count                    = 2
+  name                     = "secevalsa${count.index + 1}xyz"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+
+resource "azurerm_sql_server" "sql_server" {
+  count                        = 2
+  name                         = "secevalsql${count.index + 1}"
+  resource_group_name          = azurerm_resource_group.rg.name
+  location                     = azurerm_resource_group.rg.location
+  version                      = "12.0"
+  administrator_login          = var.admin_username
+  administrator_login_password = var.admin_password
+}
+
+resource "azurerm_sql_database" "sql_db" {
+  count               = 2
+  name                = "sqldb${count.index + 1}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  server_name         = azurerm_sql_server.sql_server[count.index].name
+  requested_service_objective_name = "S0"
+}

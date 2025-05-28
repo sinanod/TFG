@@ -1,0 +1,206 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f5f7;
+}
+
+/* LAYOUT */
+.app-layout {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 220px;
+    background-color: #1f2937;
+    color: white;
+    padding: 30px 20px;
+    flex-shrink: 0;
+    transition: width 0.3s ease;
+    overflow: hidden;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar.collapsed:hover {
+    width: 220px;
+}
+
+.sidebar.collapsed:hover .nav-link {
+    display: inline;
+}
+
+.sidebar.collapsed:hover .logo-expandido {
+    display: block;
+}
+
+.sidebar.collapsed:hover .logo-colapsado {
+    display: none;
+}
+
+/* LOGOS */
+.sidebar-logo {
+    display: block;
+    object-fit: contain;
+    margin: 20px auto;
+}
+
+.logo-expandido {
+    max-width: 100%;
+    max-height: 60px;
+    display: block;
+}
+
+.logo-colapsado {
+    max-height: 60px;
+    display: none;
+}
+
+.sidebar.collapsed .logo-expandido {
+    display: none;
+}
+
+.sidebar.collapsed .logo-colapsado {
+    display: block;
+}
+
+/* MENU */
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-menu li {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.sidebar-menu li:hover {
+    background-color: #374151;
+}
+
+.nav-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.nav-link {
+    color: #d1d5db;
+    text-decoration: none;
+    font-size: 16px;
+    white-space: nowrap;
+    text-align: left;
+    flex: 1;
+}
+
+.sidebar-menu li:hover .nav-link {
+    color: #fff;
+}
+
+.sidebar.collapsed .nav-link {
+    visibility: hidden;
+    width: 0;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.sidebar.collapsed:hover .nav-link {
+    visibility: visible;
+    width: auto;
+    overflow: visible;
+}
+
+.sidebar.collapsed .nav-icon {
+    margin: auto;
+}
+
+/* TOGGLE BUTTON */
+.menu-toggle {
+    font-size: 24px;
+    background: none;
+    border: none;
+    margin-right: auto;
+    cursor: pointer;
+    color: #333;
+}
+
+/* TOPBAR */
+.topbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    background-color: white;
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.topbar-text {
+    margin-right: 10px;
+    color: #333;
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+/* CONTENT */
+.page-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.main-content {
+    padding: 30px;
+}
+
+.main-title {
+    font-size: 30px;
+    font-weight: 700;
+    margin-bottom: 40px;
+    text-align: center;
+    color: #2c2e3e;
+}
+
+.content-wrapper {
+    margin-bottom: 40px;
+}
+
+h3 {
+    font-size: 22px;
+    margin-bottom: 20px;
+    color: #444;
+}
+
+/* GRIDS Y CARDS */
+.grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.row-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+}

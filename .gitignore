@@ -1,0 +1,24 @@
+# Carpetas de Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+
+# Planes de ejecución de Terraform
+tfplan
+
+# Archivos de configuración sensible
+*.tfvars
+*.tfvars.json
+
+# Archivos con credenciales o scripts de login
+*.bat
+*.sh
+*.ps1
+
+# Archivos de Python
+__pycache__/
+*.pyc
+.env
+
+# Archivos de entorno personalizados
+.env.*
